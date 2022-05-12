@@ -4,6 +4,8 @@
  * \brief IANA Information Element IDs
  *        Taken from https://www.iana.org/assignments/ipfix/ipfix.xhtml
  * \date 2021
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef BIFLOW_IANADEFINITIONS_H
 #define BIFLOW_IANADEFINITIONS_H
@@ -66,6 +68,12 @@ using set_t = std::unordered_set<T>;
 #define IANA_IPV4_SIZE                       4
 #define IANA_IPV6_SIZE                       16
 
+/**
+ * \brief Checks whether input element has ignored type
+ *
+ * \param[in] data_type     type of an element
+ * \return true if type is ignored, false otherwise
+ */
 inline bool
 is_ignored_type(fds_iemgr_element_type data_type) {
     // Lists are not supported for now
@@ -80,6 +88,13 @@ is_ignored_type(fds_iemgr_element_type data_type) {
     }
 }
 
+/**
+ * \brief Checks whether input element is one of key fields
+ *
+ * \param[in] en    enterprise ID
+ * \param[in] id    element ID
+ * \return true if element is a key field, false otherwise
+ */
 inline bool
 is_key_field(uint32_t en, element_id id) {
     if (en != IANA_PEN) {
@@ -100,6 +115,13 @@ is_key_field(uint32_t en, element_id id) {
     }
 }
 
+/**
+ * \brief Checks whether field is not reversible
+ *
+ * \param[in] enterprise_id     enterprise ID
+ * \param[in] id                element ID
+ * \return true if element is non reversible, false otherwise
+ */
 inline bool
 is_non_reversible_field(uint32_t enterprise_id, element_id id) {
     if (enterprise_id != IANA_PEN) {
@@ -141,6 +163,12 @@ is_non_reversible_field(uint32_t enterprise_id, element_id id) {
     }
 }
 
+/**
+ * \brief Check whether definition of the element exists
+ *
+ * \param[in] iter      element structure
+ * \return true if reverse definition does not exists, false otherwise
+ */
 inline bool
 has_missing_reverse_definition(fds_drec_iter &iter) {
     const fds_tfield *field_info = iter.field.info;
@@ -148,10 +176,21 @@ has_missing_reverse_definition(fds_drec_iter &iter) {
            && (field_info->def == nullptr || field_info->def->reverse_elem == nullptr);
 }
 
+/**
+ * \brief Check whether the record is biflow
+ *
+ * \param[in] drec      record structure
+ * \return true if is biflow, false otherwise
+ */
 inline bool is_biflow_record(fds_drec& drec) {
     return drec.tmplt->flags & FDS_TEMPLATE_BIFLOW;
 }
 
+/**
+ * \brief Check whether record is Option template
+ * \param[in] drec      record structure
+ * \return
+ */
 inline bool is_option_tmplt(fds_drec& drec) {
     return drec.tmplt->type == FDS_TYPE_TEMPLATE_OPTS;
 }

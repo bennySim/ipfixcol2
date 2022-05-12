@@ -1,6 +1,11 @@
-//
-// Created by lukashutak on 31.12.17.
-//
+/**
+ * @file   Generator.cpp
+ * @brief  Template generator (source file)
+ * @author Lukas Hutak <lukas.hutak@hotmail.com>
+ * @date   December 2017
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <cstring>     // memcpy
 #include <arpa/inet.h> // htons,...

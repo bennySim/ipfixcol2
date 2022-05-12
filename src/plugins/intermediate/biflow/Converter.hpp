@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Converter functions for biflow plugin (header file)
  * \date 2021
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef BIFLOW_CONVERTER_HPP
@@ -11,13 +13,41 @@
 #include <libfds.h>
 #include "IPAddr.hpp"
 
-
-int extract_ip(fds_drec *drec, uint32_t pen, uint16_t id, in_addr *dst);
-
+/**
+ * \brief Function from extracting destination IP address from record
+ *
+ * \param[in] drec      original record
+ * \param[out] dst      extracted IP address
+ * \return IPX_ERR_FORMAT if format of IP address is invalid(length)
+ *         IPX_ERR_NOTFOUND if there is no (ipv4 or ipv6) destination address
+ *         IPX_OK otherwise
+ */
 int extract_ip_dst(fds_drec *drec, IPAddr *dst);
 
+/**
+ * \brief Function from extracting source IP address from record
+ *
+ * \param[in] drec      original record
+ * \param[out] dst      extracted IP address
+ * \return IPX_ERR_FORMAT if format of IP address is invalid(length)
+ *         IPX_ERR_NOTFOUND if there is no (ipv4 or ipv6) source address
+ *         IPX_OK otherwise
+ */
 int extract_ip_src(fds_drec *drec, IPAddr *dst);
 
+/**
+ * \brief
+ *
+ * \tparam T        type of element to be extracted
+ *
+ * \param drec[in]      original record
+ * \param pen[in]       enterprise ID of to be extracted element
+ * \param id[in]        element ID
+ * \param dst[out]      structure for storing extracted value
+ * \return IPX_ERR_FORMAT if format of element is invalid
+ *         IPX_ERR_NOTFOUND if there is no (ipv4 or ipv6) source address
+ *         IPX_OK otherwise
+ */
 template<typename T>
 int
 extract_uint(fds_drec *drec, uint32_t pen, uint16_t id, T *dst) {

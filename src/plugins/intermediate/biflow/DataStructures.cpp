@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Data structures definitions (source file)
  * \date 2021
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "DataStructures.h"
@@ -11,9 +13,9 @@
 
 #include <iostream>
 
-record::record() : data(nullptr, &free) {}
+Record::Record() : data(nullptr, &free) {}
 
-record::~record() = default;
+Record::~Record() = default;
 
 bool
 operator<(const key &key1, const key &key2) {

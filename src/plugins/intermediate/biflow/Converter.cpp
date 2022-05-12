@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Converter functions for biflow plugin (source file)
  * \date 2021
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <ipfixcol2.h>

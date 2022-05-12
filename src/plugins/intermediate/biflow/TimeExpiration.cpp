@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Class for handling time expiration of records (source file)
  * \date 2022
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "TimeExpiration.h"
@@ -13,7 +15,7 @@ TimeExpiration::TimeExpiration(uint32_t timeout_cache) : TIMEOUT_CACHE(timeout_c
 }
 
 void
-TimeExpiration::insert_key_timestamp(const key &key) {
+TimeExpiration::add_expiration_for_key(const key &key) {
     if (timestamps.empty() || current_timestamp->is_old(key.timestamp)) {
         TimestampedBucket bucket(key.timestamp);
         if (timestamps.empty()) {
@@ -28,7 +30,7 @@ TimeExpiration::insert_key_timestamp(const key &key) {
 }
 
 void
-TimeExpiration::get_expired_records(std::vector<struct key>& expired_keys) {
+TimeExpiration::get_expired_records(std::vector<struct key> &expired_keys) {
     uint32_t timestamp_sec = get_current_timestamp();
     while (!timestamps.empty() && timestamps.front().is_expired(timestamp_sec, TIMEOUT_CACHE)) {
         std::vector<struct key> &keys = timestamps.front().get_keys();

@@ -1,7 +1,11 @@
-//
-// Created by lukashutak on 31.12.17.
-//
-
+/**
+ * @file   Generator.h
+ * @brief  Template generator (header file)
+ * @author Lukas Hutak <lukas.hutak@hotmail.com>
+ * @date   December 2017
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #ifndef LIBFDS_TGENERATOR_H
 #define LIBFDS_TGENERATOR_H
 

@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Class for handling templates
  * \date 2022
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <stdexcept>
@@ -49,11 +51,6 @@ TemplatesHandler::create_tmplt(const fds_template *tmplt, uint16_t &tmplt_id, fd
         tmplt_copy = const_cast<fds_template *>(tmplt);
     }
 
-    // If template capacity is full, start from beginning
-    if (template_id == TEMPLATE_ID_MAX) {
-        template_id = TEMPLATE_ID_MIN;
-    }
-
     // Add template to manager
     tmplt_id = get_next_template_id();
     tmplt_copy->id = tmplt_id;
@@ -86,7 +83,8 @@ TemplatesHandler::set_uniflow_template_id(const fds_template *tmplt, uint16_t &t
 }
 
 int
-TemplatesHandler::create_biflow_template(Generator& tmplt_generator, BiflowTemplate& biflow_template, fds_tmgr_t **tmgr) {
+TemplatesHandler::create_biflow_template(Generator &tmplt_generator, BiflowTemplate &biflow_template,
+                                         fds_tmgr_t **tmgr) {
     // Parse template
     struct fds_template *biflow_tmplt;
     uint16_t tmplt_id;
@@ -96,7 +94,7 @@ TemplatesHandler::create_biflow_template(Generator& tmplt_generator, BiflowTempl
         throw std::runtime_error("Failed to allocate memory for template!");
     }
     if (ret_code == FDS_ERR_FORMAT) {
-          return IPX_ERR_FORMAT;
+        return IPX_ERR_FORMAT;
     }
 
     //Create template
@@ -104,4 +102,14 @@ TemplatesHandler::create_biflow_template(Generator& tmplt_generator, BiflowTempl
 
     biflow_templates.push_back(biflow_template);
     return IPX_OK;
+}
+
+bool
+TemplatesHandler::is_full() {
+    // If template capacity is full, start from beginning
+    if (template_id == TEMPLATE_ID_MAX) {
+        template_id = TEMPLATE_ID_MIN;
+        return true;
+    }
+    return false;
 }

@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Data structures definitions
  * \date 2021
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef BIFLOW_DATASTRUCTURES_H
@@ -13,17 +15,29 @@
 #include <lzma.h>
 #include "IPAddr.hpp"
 
+/**
+ * Structure for parsed key from record
+ * Used as key in cache in Storage class
+ */
 struct key {
-    IPAddr ip_addr_src;
-    IPAddr ip_addr_dst;
-    uint16_t port_src = 0;
-    uint16_t port_dst = 0;
-    uint8_t protocol = 0;
-    uint64_t timestamp;
+    IPAddr ip_addr_src;     /**  Source IP address               */
+    IPAddr ip_addr_dst;     /**  Destination IP address          */
+    uint16_t port_src = 0;  /**  Source port                     */
+    uint16_t port_dst = 0;  /**  Destination port                */
+    uint8_t protocol = 0;   /**  Protocol number                 */
+    uint64_t timestamp;     /**  Time of arrival to plugin       */
 };
 
+/**
+ * Class for computing hash for key structure
+ */
 class HashFunction {
 public:
+    /**
+     * \brief Calculate hash from all fields in structure key
+     * \param[in] key       record key
+     * \return hash for given key
+     */
     size_t operator()(const key& key) const {
         if (key.ip_addr_dst.is_ip6()) {
             uint8_t id[37] = {0};
@@ -49,24 +63,65 @@ public:
 
 using data_ptr = std::unique_ptr<uint8_t, decltype(&free)>;
 
-class record {
+/**
+ * class Record used for storing parsed record data
+ */
+class Record {
 public:
-    data_ptr data;             /**< Start of the record                     */
-    uint16_t size;             /**< Size of the record (in bytes)           */
-    uint16_t tmplt_id;
-    ~record();
+    data_ptr data;             /** Raw data of record                 */
+    uint16_t size;             /** Record's size in bytes             */
+    uint16_t tmplt_id;         /** ID of template describing record   */
 
-    record();
+    /**
+     * \brief Class destructor
+     */
+    ~Record();
+
+    /**
+     * \brief Class constructor
+     */
+    Record();
 };
 
+/**
+ * \brief Function for ordering keys
+ *
+ * \param key1[in]      key
+ * \param key2[in]      key
+ * \return true if key1 is smaller than key2, false otherwise
+ */
 bool operator<(const key &key1, const key &key2);
 
+/**
+ * \brief  Function for equality of keys
+ *
+ * \param[in] key1      key
+ * \param[in] key2      key
+ * \return true if keys are the same, false otherwise
+ */
 bool operator==(const key &key1, const key &key2);
 
+/**
+ * \brief Function for extracting key from record
+ *
+ * \param[in] drec                  original record structure
+ * \param[out] key                  extracted key, filled in function
+ * \param[in] pair_missing_ports    parameter from configuration pairMissingPorts
+ * \return true if extraction was successful, false otherwise
+ */
 int get_record_key(fds_drec& drec, struct key &key, bool pair_missing_ports);
 
+/**
+ * \brief Create reversed key for a key
+ *
+ * \param[in] key               key
+ * \param[out] reversed_key     reverse key for \param key, filled in this function
+ */
 void get_reversed_key(const key &key, struct key *reversed_key);
 
+/**
+ * \return current time in milliseconds
+ */
 inline uint64_t get_current_timestamp() {
     struct timespec monotime{};
     clock_gettime(CLOCK_MONOTONIC, &monotime);

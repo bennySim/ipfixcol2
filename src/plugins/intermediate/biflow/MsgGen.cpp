@@ -1,6 +1,11 @@
-//
-// Created by lukashutak on 28/03/18.
-//
+/**
+ * @file   MsgGen.cpp
+ * @brief  Message generator functions (source file)
+ * @author Lukas Hutak <lukas.hutak@hotmail.com>
+ * @date   March 2018
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <cstdlib>
 #include <cstring>

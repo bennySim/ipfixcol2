@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Configuration of biflow plugin (header file)
  * \date 2021
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef BIFLOW_CONFIG_H
@@ -18,18 +20,21 @@
 #define TIMEOUT_CAHE_SEC_DEFAULT     5
 #define TIMEOUT_MESSAGE_SEC_DEFAULT  10
 
-
-/** Parsed configuration of an instance      */
 /**
     * \brief Create a new configuration
     * \param[in] params XML configuration of biflow plugin
     * \throw runtime_error in case of invalid configuration
     */
 struct configuration {
+    /** Cache timeout in seconds        */
     uint32_t timeout_cache = TIMEOUT_CAHE_SEC_DEFAULT;
+    /** Message timeout in seconds      */
     uint32_t timeout_msg = TIMEOUT_MESSAGE_SEC_DEFAULT;
+    /** Parameter for biflow building   */
     bool ignore_missing_reverse = false;
+    /** Parameter for key extracting    */
     bool pair_missing_ports = false;
+    /** Outout ODID value               */
     uint32_t odid;
 };
 
@@ -54,7 +59,7 @@ static const struct fds_xml_args args_params[] = {
 };
 
 /**
- * \brief Parse all parameters
+ * \brief Interpret all parsed parameters
  *
  * This is the main parser function that process all format specifiers and parser all
  * specifications of outputs.
@@ -95,6 +100,12 @@ parse_params(fds_xml_ctx_t *params) {
     return config;
 }
 
+/**
+ * \brief Function for parsing configuration in XML format
+ *
+ * \param[in] params    unparsed plugin configuration
+ * \return parsed configuration
+ */
 inline struct configuration
 parse_configuration(const char *params) {
 

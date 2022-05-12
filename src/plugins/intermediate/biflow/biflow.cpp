@@ -3,6 +3,8 @@
  * \author Simona Bennárová
  * \brief Biflow converter plugin
  * \date 2021
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <memory>
 #include <unordered_map>
@@ -27,7 +29,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
-    Storage * storage;
+    Storage *storage;
     try {
         // Create and parse the configuration
         struct configuration config = parse_configuration(params);
@@ -53,7 +55,7 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg) {
     int ret_code = IPX_OK;
 
     try {
-        Storage * storage = reinterpret_cast<Storage *>(cfg);
+        Storage *storage = reinterpret_cast<Storage *>(cfg);
         storage->process_message(msg);
     } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());

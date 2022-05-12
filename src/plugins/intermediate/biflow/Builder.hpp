@@ -1,3 +1,11 @@
+/**
+ * @file   Builder.hpp
+ * @brief  Message builder functions (header file)
+ * @author Lukas Hutak <lukas.hutak@hotmail.com>
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #ifndef MSG_BUILDER
 #define MSG_BUILDER
 
