@@ -81,6 +81,13 @@ public:
      * \brief Class constructor
      */
     Record();
+
+    Record& operator=(Record&& other) {
+        data = std::move(other.data);
+        size = other.size;
+        tmplt_id = other.tmplt_id;
+        return *this;
+    }
 };
 
 /**
