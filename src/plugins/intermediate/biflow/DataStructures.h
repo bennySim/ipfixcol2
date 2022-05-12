@@ -82,11 +82,24 @@ public:
      */
     Record();
 
-    Record& operator=(Record&& other) {
+    Record& operator=(Record&& other)  noexcept {
         data = std::move(other.data);
         size = other.size;
         tmplt_id = other.tmplt_id;
         return *this;
+    }
+
+    Record(const Record& record) : data(nullptr, &free) {
+        uint8_t *data2copy = static_cast<uint8_t *>(std::malloc(record.size));
+        if (!data2copy) {
+            throw std::runtime_error("Failed to allocate memory for record data!");
+        }
+
+        std::memcpy(data2copy, record.data.get(), record.size);
+        data.reset(data2copy);
+
+        size = record.size;
+        tmplt_id = record.tmplt_id;
     }
 };
 
