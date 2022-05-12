@@ -82,7 +82,7 @@ public:
      */
     Record();
 
-    Record& operator=(Record&& other)  noexcept {
+    /*Record& operator=(Record&& other)  noexcept {
         data = std::move(other.data);
         size = other.size;
         tmplt_id = other.tmplt_id;
@@ -100,7 +100,7 @@ public:
 
         size = record.size;
         tmplt_id = record.tmplt_id;
-    }
+    }*/
 };
 
 /**
