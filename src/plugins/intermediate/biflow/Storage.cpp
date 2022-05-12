@@ -46,7 +46,7 @@ Storage::send_all_remaining_records() {
 
     for (auto &record_pair : record_cache) {
         // Add record to message
-        Record *record_data = record_pair.second.get();
+        Record *record_data = record_pair.second;
         msg_sender.add_record_to_message(record_data->data.get(), record_data->size, record_data->tmplt_id, tmgr);
     }
 }
@@ -89,7 +89,7 @@ Storage::get_data_for_key(const key &key, Record **record) {
     if (element == record_cache.end()) {
         return IPX_ERR_NOTFOUND;
     }
-    *record = element->second.get();
+    *record = element->second;
     return IPX_OK;
 }
 
@@ -115,7 +115,7 @@ Storage::delete_reversed_record(const key &key) {
 void
 Storage::store_record_in_cache(const struct key &key, std::unique_ptr<Record> &record_data_ptr) {
 
-    record_cache.insert({key, std::move(record_data_ptr)});
+    record_cache.insert({key, record_data_ptr.release()});
 
     time_expiration.add_expiration_for_key(key);
 }
@@ -281,7 +281,7 @@ Storage::send_expired_records() {
             // record is not in the cache anymore
             continue;
         }
-        Record *record_data = record_pair->second.get();
+        Record *record_data = record_pair->second;
 
         // Add record to message
         msg_sender.add_record_to_message(record_data->data.get(), record_data->size, record_data->tmplt_id, tmgr);
@@ -330,7 +330,7 @@ Storage::process_record(fds_drec &drec) {
         // Key already in cache, send record and store newer to cache
         msg_sender.add_record_to_message(iterator->second->data.get(), iterator->second->size,
                                          iterator->second->tmplt_id, tmgr);
-        iterator->second = std::move(record_data_ptr);
+        iterator->second = record_data_ptr.release();
     } else {
         store_record_in_cache(record_key, record_data_ptr);
     }

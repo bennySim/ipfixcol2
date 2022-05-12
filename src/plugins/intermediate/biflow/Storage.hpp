@@ -32,7 +32,7 @@ private:
     /** Configuration parameter pairMissingPorts        **/
     const bool PAIR_MISSING_PORTS;
     /** Cache for storing processed records             **/
-    std::unordered_map<struct key, std::unique_ptr<Record>, HashFunction> record_cache;
+    std::unordered_map<struct key, Record *, HashFunction> record_cache;
     /** Class for handling message building and sending **/
     MsgSender msg_sender;
     /** Class for handling time expiration algorithm    **/
