@@ -48,6 +48,7 @@ Storage::send_all_remaining_records() {
         // Add record to message
         Record *record_data = record_pair.second;
         msg_sender.add_record_to_message(record_data->data.get(), record_data->size, record_data->tmplt_id, tmgr);
+        delete record_data;
     }
 }
 
@@ -64,13 +65,14 @@ Storage::has_reversed_key(const struct key &key) {
     return record_cache.find(reversed_key) != record_cache.end();
 }
 
-void
-Storage::get_record_data(fds_drec &drec, std::unique_ptr<Record> &record_data_ptr) {
+Record*
+Storage::get_record_data(fds_drec &drec) {
+    std::unique_ptr<Record> record(new Record());
     // Flush to prevent missing template
     if (template_handler.is_full()) {
         send_all_remaining_records();
     }
-    template_handler.set_uniflow_template_id(drec.tmplt, record_data_ptr->tmplt_id, &tmgr);
+    template_handler.set_uniflow_template_id(drec.tmplt, record->tmplt_id, &tmgr);
 
     uint8_t *data2copy = static_cast<uint8_t *>(std::malloc(drec.size));
     if (!data2copy) {
@@ -78,9 +80,11 @@ Storage::get_record_data(fds_drec &drec, std::unique_ptr<Record> &record_data_pt
     }
 
     std::memcpy(data2copy, drec.data, drec.size);
-    record_data_ptr->data.reset(data2copy);
+    record->data.reset(data2copy);
 
-    record_data_ptr->size = drec.size;
+    record->size = drec.size;
+
+    return record.release();
 }
 
 int
@@ -102,6 +106,8 @@ Storage::get_data_for_reversed_key(const key &key, Record **record) {
 
 void
 Storage::delete_record(const key &key) {
+    auto el = record_cache.find(key);
+    delete el->second;
     record_cache.erase(key);
 }
 
@@ -113,9 +119,9 @@ Storage::delete_reversed_record(const key &key) {
 }
 
 void
-Storage::store_record_in_cache(const struct key &key, std::unique_ptr<Record> &record_data_ptr) {
+Storage::store_record_in_cache(const struct key &key, fds_drec& record_data) {
 
-    record_cache.insert({key, record_data_ptr.release()});
+    record_cache.insert({key, get_record_data(record_data)});
 
     time_expiration.add_expiration_for_key(key);
 }
@@ -164,8 +170,14 @@ Storage::add_record_fields_to_drec(Record *record_data, ipfix_drec &drec, Genera
     drec_original.tmplt = tmplt;
     drec_original.size = record_data->size;
 
+   add_record_fields_to_drec(drec_original, drec, tmplt_generator, is_reversed, biflow_tmplt_exists);
+}
+
+void
+Storage::add_record_fields_to_drec(fds_drec& record_data, ipfix_drec &drec, Generator &tmplt_generator, bool is_reversed, bool biflow_tmplt_exists) {
+
     struct fds_drec_iter iter;
-    fds_drec_iter_init(&iter, &drec_original, 0);
+    fds_drec_iter_init(&iter, &record_data, 0);
     while (fds_drec_iter_next(&iter) != FDS_EOC) {
         add_field_to_drec(&drec, &tmplt_generator, iter, is_reversed, biflow_tmplt_exists);
     }
@@ -218,7 +230,7 @@ add_key_fields_to_record(key &reversed_key, ipfix_drec &drec) {
 }
 
 int
-Storage::create_biflow_record(struct key &reversed_key, Record *reversed_data) {
+Storage::create_biflow_record(struct key &reversed_key, fds_drec &reversed_data) {
     // Initialize fields
     ipfix_drec drec{};
     Generator tmplt_generator{};
@@ -227,13 +239,15 @@ Storage::create_biflow_record(struct key &reversed_key, Record *reversed_data) {
     // Get reverse key data
     Record *data = nullptr;
     get_data_for_reversed_key(reversed_key, &data);
+    uint16_t reversed_tmplt_id;
+    template_handler.set_uniflow_template_id(reversed_data.tmplt, reversed_tmplt_id, &tmgr);
 
     // Check if biflow template does not exists already
-    bool biflow_tmplt_exists_t = template_handler.biflow_tmplt_exists(data->tmplt_id, reversed_data->tmplt_id,
+    bool biflow_tmplt_exists_t = template_handler.biflow_tmplt_exists(data->tmplt_id, reversed_tmplt_id,
                                                                       biflow_template);
     if (!biflow_tmplt_exists_t) {
         fds_tmgr_template_get(tmgr, data->tmplt_id, &biflow_template.tmplt);
-        fds_tmgr_template_get(tmgr, reversed_data->tmplt_id, &biflow_template.reversed_tmplt);
+        fds_tmgr_template_get(tmgr, reversed_tmplt_id, &biflow_template.reversed_tmplt);
     }
 
     // Add key fields to message and to template only if needed
@@ -244,13 +258,12 @@ Storage::create_biflow_record(struct key &reversed_key, Record *reversed_data) {
 
     // Add other fields from record and reversed record to the message and template
     add_record_fields_to_drec(data, drec, tmplt_generator, biflow_template.tmplt, false, biflow_tmplt_exists_t);
-    add_record_fields_to_drec(reversed_data, drec, tmplt_generator, biflow_template.reversed_tmplt, true,
-                              biflow_tmplt_exists_t);
+    add_record_fields_to_drec(reversed_data, drec, tmplt_generator, true, biflow_tmplt_exists_t);
 
     // Create biflow template if does not exist
     if (!biflow_tmplt_exists_t) {
         int ret_code = template_handler.create_biflow_template(tmplt_generator, biflow_template, &tmgr);
-        if (ret_code != IPX_OK) { // TODO can happen?
+        if (ret_code != IPX_OK) {
             delete_reversed_record(reversed_key);
             return IPX_ERR_FORMAT;
         }
@@ -310,13 +323,9 @@ Storage::process_record(fds_drec &drec) {
         return;
     }
 
-    // Get record data
-    std::unique_ptr<Record> record_data_ptr(new Record);
-    get_record_data(drec, record_data_ptr);
-
     // Check biflow
     if (has_reversed_key(record_key)) {
-        ret_code = create_biflow_record(record_key, record_data_ptr.get());
+        ret_code = create_biflow_record(record_key, drec);
         if (ret_code != IPX_OK) {
             // Error occured, send record to output
             add_raw_record_to_message(drec);
@@ -330,10 +339,9 @@ Storage::process_record(fds_drec &drec) {
         // Key already in cache, send record and store newer to cache
         msg_sender.add_record_to_message(iterator->second->data.get(), iterator->second->size,
                                          iterator->second->tmplt_id, tmgr);
-        iterator->second = record_data_ptr.release();
-    } else {
-        store_record_in_cache(record_key, record_data_ptr);
+        delete_record(record_key);
     }
+    store_record_in_cache(record_key, drec);
 }
 
 void

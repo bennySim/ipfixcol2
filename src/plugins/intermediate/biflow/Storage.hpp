@@ -32,7 +32,7 @@ private:
     /** Configuration parameter pairMissingPorts        **/
     const bool PAIR_MISSING_PORTS;
     /** Cache for storing processed records             **/
-    std::unordered_map<struct key, Record *, HashFunction> record_cache;
+    std::unordered_map<struct key, Record*, HashFunction> record_cache;
     /** Class for handling message building and sending **/
     MsgSender msg_sender;
     /** Class for handling time expiration algorithm    **/
@@ -53,9 +53,9 @@ private:
     // Retrieve data associated with reversed key from cache
     int get_data_for_reversed_key(const key &key, Record **record);
     // Store processed record in the cache
-    void store_record_in_cache(const struct key &key, std::unique_ptr<Record> &record_data_ptr);
+    void store_record_in_cache(const struct key &key, fds_drec& record_data);
     // Build biflow record
-    int create_biflow_record(struct key &reversed_key, Record *reversed_data);
+    int create_biflow_record(struct key &reversed_key, fds_drec &reversed_data);
     // Add unprocessed record to message
     void add_raw_record_to_message(fds_drec &drec);
     // Add field to new record (check if is allowed to add)
@@ -64,16 +64,18 @@ private:
     // Process each field of record and add them to new record
     void add_record_fields_to_drec(Record *record_data, ipfix_drec &drec, Generator &tmplt_generator,
                                    const fds_template *tmplt, bool is_reversed, bool biflow_tmplt_exists);
+    void add_record_fields_to_drec(fds_drec &record_data, ipfix_drec &drec, Generator &tmplt_generator, bool is_reversed, bool biflow_tmplt_exists);
     // Extract data from unprocessed record
-    void get_record_data(fds_drec &drec, std::unique_ptr<Record> &record_data_ptr);
+    Record * get_record_data(fds_drec &drec);
     // Process one record from message
     void process_record(fds_drec &drec);
     // Add all records remained in cache to message
     void send_all_remaining_records();
+
     // Find all expired records in cache and add them to message
     void send_expired_records();
-
 public:
+
     /**
      * \brief Class Storage constructor
      * \param[in] ctx       Instance context
