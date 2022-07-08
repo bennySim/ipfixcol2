@@ -9,8 +9,8 @@
 
 #include "Storage.hpp"
 #include "IanaDefinitions.h"
-#include <algorithm>
 #include <unordered_map>
+#include <tuple>
 
 void
 Storage::init_tmgr(ipx_ctx_t *ctx) {
@@ -46,9 +46,8 @@ Storage::send_all_remaining_records() {
 
     for (auto &record_pair : record_cache) {
         // Add record to message
-        Record *record_data = record_pair.second;
-        msg_sender.add_record_to_message(record_data->data.get(), record_data->size, record_data->tmplt_id, tmgr);
-        delete record_data;
+        Record &record = record_pair.second;
+        msg_sender.add_record_to_message(record.data.get(), record.size, record.tmplt_id, tmgr);
     }
 }
 
@@ -65,49 +64,15 @@ Storage::has_reversed_key(const struct key &key) {
     return record_cache.find(reversed_key) != record_cache.end();
 }
 
-Record*
-Storage::get_record_data(fds_drec &drec) {
-    std::unique_ptr<Record> record(new Record());
-    // Flush to prevent missing template
-    if (template_handler.is_full()) {
-        send_all_remaining_records();
-    }
-    template_handler.set_uniflow_template_id(drec.tmplt, record->tmplt_id, &tmgr);
-
-    uint8_t *data2copy = static_cast<uint8_t *>(std::malloc(drec.size));
-    if (!data2copy) {
-        throw std::runtime_error("Failed to allocate memory for record data!");
-    }
-
-    std::memcpy(data2copy, drec.data, drec.size);
-    record->data.reset(data2copy);
-
-    record->size = drec.size;
-
-    return record.release();
-}
-
-int
-Storage::get_data_for_key(const key &key, Record **record) {
-    auto element = record_cache.find(key);
-    if (element == record_cache.end()) {
-        return IPX_ERR_NOTFOUND;
-    }
-    *record = element->second;
-    return IPX_OK;
-}
-
-int
-Storage::get_data_for_reversed_key(const key &key, Record **record) {
+Record &
+Storage::get_data_for_reversed_key(const key &key) {
     struct key reversed_key;
     get_reversed_key(key, &reversed_key);
-    return get_data_for_key(reversed_key, record);
+    return record_cache.find(reversed_key)->second;
 }
 
 void
 Storage::delete_record(const key &key) {
-    auto el = record_cache.find(key);
-    delete el->second;
     record_cache.erase(key);
 }
 
@@ -119,11 +84,24 @@ Storage::delete_reversed_record(const key &key) {
 }
 
 void
-Storage::store_record_in_cache(const struct key &key, fds_drec& record_data) {
+Storage::store_record_in_cache(const struct key &key, fds_drec &record_data) {
 
-    record_cache.insert({key, get_record_data(record_data)});
+    uint16_t template_id;
+    template_id = get_tmplt_id(record_data, template_id);
+
+    std::tuple<fds_drec &, uint16_t> record_parameters(record_data, template_id);
+    record_cache.emplace(std::piecewise_construct, std::make_tuple(key), record_parameters);
 
     time_expiration.add_expiration_for_key(key);
+}
+
+uint16_t Storage::get_tmplt_id(const fds_drec &record_data, uint16_t &template_id) {// Flush to prevent missing template
+    if (template_handler.is_full()) {
+        send_all_remaining_records();
+    }
+
+    template_handler.set_uniflow_template_id(record_data.tmplt, template_id, &tmgr);
+    return template_id;
 }
 
 void
@@ -163,18 +141,19 @@ Storage::add_field_to_drec(ipfix_drec *rec, Generator *tmplt_generator, fds_drec
 }
 
 void
-Storage::add_record_fields_to_drec(Record *record_data, ipfix_drec &drec, Generator &tmplt_generator,
+Storage::add_record_fields_to_drec(Record &record_data, ipfix_drec &drec, Generator &tmplt_generator,
                                    const fds_template *tmplt, bool is_reversed, bool biflow_tmplt_exists) {
     struct fds_drec drec_original;
-    drec_original.data = record_data->data.get();
+    drec_original.data = record_data.data.get();
     drec_original.tmplt = tmplt;
-    drec_original.size = record_data->size;
+    drec_original.size = record_data.size;
 
-   add_record_fields_to_drec(drec_original, drec, tmplt_generator, is_reversed, biflow_tmplt_exists);
+    add_record_fields_to_drec(drec_original, drec, tmplt_generator, is_reversed, biflow_tmplt_exists);
 }
 
 void
-Storage::add_record_fields_to_drec(fds_drec& record_data, ipfix_drec &drec, Generator &tmplt_generator, bool is_reversed, bool biflow_tmplt_exists) {
+Storage::add_record_fields_to_drec(fds_drec &record_data, ipfix_drec &drec, Generator &tmplt_generator,
+                                   bool is_reversed, bool biflow_tmplt_exists) {
 
     struct fds_drec_iter iter;
     fds_drec_iter_init(&iter, &record_data, 0);
@@ -237,16 +216,15 @@ Storage::create_biflow_record(struct key &reversed_key, fds_drec &reversed_data)
     BiflowTemplate biflow_template;
 
     // Get reverse key data
-    Record *data = nullptr;
-    get_data_for_reversed_key(reversed_key, &data);
+    Record &data = get_data_for_reversed_key(reversed_key);
     uint16_t reversed_tmplt_id;
-    template_handler.set_uniflow_template_id(reversed_data.tmplt, reversed_tmplt_id, &tmgr);
+    get_tmplt_id(reversed_data, reversed_tmplt_id);
 
     // Check if biflow template does not exists already
-    bool biflow_tmplt_exists_t = template_handler.biflow_tmplt_exists(data->tmplt_id, reversed_tmplt_id,
+    bool biflow_tmplt_exists_t = template_handler.biflow_tmplt_exists(data.tmplt_id, reversed_tmplt_id,
                                                                       biflow_template);
     if (!biflow_tmplt_exists_t) {
-        fds_tmgr_template_get(tmgr, data->tmplt_id, &biflow_template.tmplt);
+        fds_tmgr_template_get(tmgr, data.tmplt_id, &biflow_template.tmplt);
         fds_tmgr_template_get(tmgr, reversed_tmplt_id, &biflow_template.reversed_tmplt);
     }
 
@@ -279,7 +257,7 @@ Storage::create_biflow_record(struct key &reversed_key, fds_drec &reversed_data)
 void
 Storage::add_raw_record_to_message(fds_drec &drec) {
     uint16_t tmplt_id;
-    template_handler.set_uniflow_template_id(drec.tmplt, tmplt_id, &tmgr);
+    get_tmplt_id(drec, tmplt_id);
     msg_sender.add_record_to_message(drec.data, drec.size, tmplt_id, tmgr);
 }
 
@@ -294,10 +272,10 @@ Storage::send_expired_records() {
             // record is not in the cache anymore
             continue;
         }
-        Record *record_data = record_pair->second;
+        Record &record_data = record_pair->second;
 
         // Add record to message
-        msg_sender.add_record_to_message(record_data->data.get(), record_data->size, record_data->tmplt_id, tmgr);
+        msg_sender.add_record_to_message(record_data.data.get(), record_data.size, record_data.tmplt_id, tmgr);
         delete_record(expired_key);
     }
 
@@ -337,8 +315,8 @@ Storage::process_record(fds_drec &drec) {
     auto iterator = record_cache.find(record_key);
     if (iterator != record_cache.end()) {
         // Key already in cache, send record and store newer to cache
-        msg_sender.add_record_to_message(iterator->second->data.get(), iterator->second->size,
-                                         iterator->second->tmplt_id, tmgr);
+        msg_sender.add_record_to_message(iterator->second.data.get(), iterator->second.size,
+                                         iterator->second.tmplt_id, tmgr);
         delete_record(record_key);
     }
     store_record_in_cache(record_key, drec);

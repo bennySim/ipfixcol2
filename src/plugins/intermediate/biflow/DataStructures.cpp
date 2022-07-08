@@ -13,7 +13,18 @@
 
 #include <iostream>
 
-Record::Record() : data(nullptr, &free) {}
+Record::Record(fds_drec &record_data, uint16_t template_id) : data(nullptr, &free), tmplt_id(template_id) {
+
+    uint8_t *data2copy = static_cast<uint8_t *>(std::malloc(record_data.size));
+    if (!data2copy) {
+        throw std::runtime_error("Failed to allocate memory for record data!");
+    }
+
+    std::memcpy(data2copy, record_data.data, record_data.size);
+    data.reset(data2copy);
+
+    size = record_data.size;
+}
 
 Record::~Record() = default;
 

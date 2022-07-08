@@ -38,7 +38,7 @@ public:
      * \param[in] key       record key
      * \return hash for given key
      */
-    size_t operator()(const key& key) const {
+    size_t operator()(const key &key) const {
         if (key.ip_addr_dst.is_ip6()) {
             uint8_t id[37] = {0};
             memcpy(id + 0, &key.ip_addr_src, 16);
@@ -79,8 +79,11 @@ public:
 
     /**
      * \brief Class constructor
+     *
+     * \param record_data   structure describing record in collector
+     * \param template_id   template ID in biflow template manager
      */
-    Record();
+    Record(fds_drec &record_data, uint16_t template_id);
 };
 
 /**
@@ -109,7 +112,7 @@ bool operator==(const key &key1, const key &key2);
  * \param[in] pair_missing_ports    parameter from configuration pairMissingPorts
  * \return true if extraction was successful, false otherwise
  */
-int get_record_key(fds_drec& drec, struct key &key, bool pair_missing_ports);
+int get_record_key(fds_drec &drec, struct key &key, bool pair_missing_ports);
 
 /**
  * \brief Create reversed key for a key
